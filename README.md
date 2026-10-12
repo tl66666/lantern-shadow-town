@@ -18,6 +18,24 @@
 - 在线版运行在 HTTPS 下，**手势 / 摄像头模式可直接使用**（画面仅本地推理，不上传任何服务器）；不想开摄像头就选「🖱 鼠标模式」。
 - 游戏内视频素材较大，首次加载请耐心等待片刻；加载卡住时可 `Ctrl + F5` 强刷。
 
+## 📸 游戏一览
+
+![首屏 · 四灵入镇](assets/screenshots/title-screen.jpg)
+
+*首屏 · 女娲补天遗石所化，四灵入镇 —— 照住「自由选关」，点亮你的梦灯。*
+
+### 🗺 四关地图
+
+| <img src="assets/screenshots/map-1-lantern-town.jpg" width="440" alt="第一关"/> | <img src="assets/screenshots/map-2-temple-fair.jpg" width="440" alt="第二关"/> |
+|:---:|:---:|
+| **第一关 · 灯河梦鹿** | **第二关 · 庙会神马** |
+| 水乡元宵灯会 · 司梦 · 灯河锦囊 | 山门庙会大街 · 司福 · 金绸额福 |
+| <img src="assets/screenshots/map-3-blossom-creek.jpg" width="440" alt="第三关"/> | <img src="assets/screenshots/map-4-gallery-street.jpg" width="440" alt="第四关"/> |
+| **第三关 · 溪畔李白** | **第四关 · 街市萌莎** |
+| 桃花溪月夜 · 司诗 · 醉步邀月 | 字画古玩街 · 司画 · 油画之姿 |
+
+> 四关场景即四段 1080p 水墨实景视频，目标灵杰就藏在真实画面里——移动手灯光晕，凝视 1.5 秒点亮。
+
 ## ✨ 特色
 
 - **手势 / 头控双模式**：基于 MediaPipe Hands 离线识别（WASM 本地推理，无需联网调用 API），摄像头前挥手、点头即可游玩；同时完整支持鼠标操作。
