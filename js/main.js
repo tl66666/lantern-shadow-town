@@ -102,7 +102,7 @@ window.MYC = window.MYC || {};
     });
 
     window.addEventListener('keydown', function (e) {
-      if (e.repeat) return;
+      if (e.repeat || e.isComposing) return;   // 长按重复 / 中文输入法组合中不触发
       if (e.key === 'd' || e.key === 'D') game.toggleDebug();
       if (e.key === 'i' || e.key === 'I') game.toggleInput();
     });
