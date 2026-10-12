@@ -1,0 +1,343 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>灯影古镇 · 四灵补天</title>
+  <link rel="stylesheet" href="css/style.css?v=1.13.0" />
+</head>
+<body>
+
+  <!-- 关卡循环视频（隐藏元素，画布取样） -->
+  <video id="city-video" playsinline muted loop preload="auto" style="display:none"></video>
+
+  <!-- 主画布：压暗古镇 + 梦灯 -->
+  <canvas id="stage"></canvas>
+
+  <!-- 摄像头画面源（隐藏元素，手势驱动取样用） -->
+  <video id="camera" playsinline muted style="display:none"></video>
+
+  <!-- 手势预览小窗（右上角：绿点 = 控制点，边框亮 = 正在跟踪） -->
+  <div id="hand-pip">
+    <video id="pip-cam" playsinline muted></video>
+    <div id="pip-dot"></div>
+  </div>
+
+  <!-- ==================== UI 覆盖层 ==================== -->
+  <div class="ui">
+
+    <!-- 加载 -->
+    <div class="layer" id="loading">
+      <div class="panel">
+        <div class="spinner"></div>
+        <div class="loading-text" id="loading-text">正在点亮古镇……</div>
+      </div>
+    </div>
+
+    <!-- 待机：四灵卡槽 + 打字机 + 开始按钮 -->
+    <div class="layer" id="attract">
+      <h1 class="attract-title">灯影古镇</h1>
+      <div class="attract-sub">女娲补天遗石所化 · 四灵入镇</div>
+      <div id="attract-cards"></div>
+      <div id="attract-typed" class="attract-typed"></div>
+      <div id="attract-progress" class="attract-progress"></div>
+      <div id="attract-input" class="attract-input"></div>
+      <div class="attract-start-wrap">
+        <div class="intro-start-hint">照住按钮 1.5 秒 · 光圈充满即开始</div>
+        <button class="btn btn-gaze btn-primary attract-start" id="btn-start">开始游戏</button>
+      </div>
+    </div>
+
+    <!-- 序章（不可跳过，看完自动进关） -->
+    <div class="layer" id="story">
+      <video id="story-video" class="hidden-video" playsinline muted></video>
+      <div class="story-mask"></div>
+      <div id="story-text" class="story-text"></div>
+    </div>
+
+    <!-- 关前预告（只给特征与行为，不剧透去向） -->
+    <div class="layer" id="level-intro">
+      <div class="intro-story" id="intro-story"></div>
+      <div class="intro-head">
+        <div class="intro-title" id="intro-title"></div>
+        <div class="intro-subtitle" id="intro-subtitle"></div>
+      </div>
+      <div class="intro-card" id="intro-card">
+        <div class="intro-card-frame btn-gaze" id="intro-card-frame" title="照住可放大细观">
+          <img id="intro-card-img" draggable="false" />
+          <div class="card-unknown-mark">？</div>
+        </div>
+        <div class="intro-card-info">
+          <div class="intro-card-title" id="intro-card-title"></div>
+          <div class="intro-rows">
+            <div class="intro-row"><span class="row-label">特征</span><span id="intro-sign"></span></div>
+            <div class="intro-row"><span class="row-label">行为</span><span id="intro-behave"></span></div>
+            <div class="intro-row"><span class="row-label">习性</span><span id="intro-goal"></span></div>
+          </div>
+          <div class="intro-tip" id="intro-tip">照住其他红金身影会被提醒并扣分</div>
+        </div>
+      </div>
+      <div class="intro-start-wrap">
+        <div class="intro-start-hint">都看仔细了？照住按钮，光圈充满即出发</div>
+        <div class="btn-row">
+          <button class="btn btn-gaze" id="btn-intro-back">返回</button>
+          <button class="btn btn-gaze btn-primary intro-start" id="btn-intro-start">开始寻梦</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 游玩中角标 -->
+    <div id="level-badge"></div>
+
+    <!-- 提示 -->
+    <div class="layer" id="hint">
+      <div class="hint-text" id="hint-text"></div>
+    </div>
+
+    <!-- 假目标提醒 -->
+    <div class="layer" id="decoy-remind">
+      <div class="decoy-remind-box" id="decoy-remind-text"></div>
+    </div>
+
+    <!-- 成功：角色卡 + 四印 + 结算（角色卡复刻详情弹窗质感：金线双框+流光+萤火+浮沉） -->
+    <div class="layer" id="success">
+      <div class="success-aura" aria-hidden="true"></div>
+      <div class="success-stage">
+        <div class="spirit-card" id="spirit-card">
+          <div class="spirit-card-frame btn-gaze" id="spirit-card-frame" title="照住可放大细观">
+            <div class="sc-glow" aria-hidden="true"></div>
+            <div class="sc-pulse" aria-hidden="true"></div>
+            <img id="spirit-card-img" draggable="false" />
+            <div class="sc-glyph" id="spirit-card-glyph" aria-hidden="true"></div>
+            <div class="sc-inner-line" aria-hidden="true"></div>
+            <div class="sc-sheen" aria-hidden="true"></div>
+            <div class="sc-firefly sc-f1" aria-hidden="true"></div>
+            <div class="sc-firefly sc-f2" aria-hidden="true"></div>
+            <div class="sc-hint"><i aria-hidden="true"></i>照住卡片 · 翻开灵韵卷宗</div>
+          </div>
+          <div class="spirit-card-info">
+            <div class="spirit-card-title" id="spirit-card-title"></div>
+            <div class="spirit-card-subtitle" id="spirit-card-subtitle"></div>
+            <div class="spirit-card-desc" id="spirit-card-desc"></div>
+          </div>
+        </div>
+        <div class="spirit-quote" id="spirit-quote"></div>
+      </div>
+      <div class="success-panel" id="success-panel">
+        <div class="success-title" id="success-title"></div>
+        <div class="success-score" id="success-score"></div>
+        <div class="stone-row" id="stone-row"></div>
+        <div class="next-line" id="next-line"></div>
+        <div class="btn-row">
+          <button class="btn btn-gaze btn-primary" id="btn-next">下一关</button>
+          <button class="btn btn-gaze" id="btn-replay">再寻一次</button>
+          <button class="btn btn-gaze" id="btn-success-back">返回</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 幸运转盘（通关谢礼 · 仅此一次：整图画面不动，灯光层旋转定奖；中奖原地庆祝不弹窗，转盘界面常驻；v1.12.0） -->
+    <div class="layer" id="lucky">
+      <div class="lucky-head">
+        <div class="lucky-title">幸运大转盘</div>
+        <div class="lucky-sub">四灵归位 · 通关谢礼，仅此一次</div>
+      </div>
+      <div class="lucky-stage" id="lucky-stage">
+        <img class="lucky-scene" id="lucky-scene" src="assets/images/lucky.jpg" draggable="false" alt="" />
+        <div class="lucky-wheel" id="lucky-wheel" aria-hidden="true"></div>
+        <div class="lucky-light" id="lucky-light" aria-hidden="true"></div>
+        <!-- 中奖庆祝特效层（v1.12.0）：原点光爆 + 双扩散环 + 星屑迸发，只在中奖方位原地绽放，无弹窗 -->
+        <div class="lucky-burst" id="lucky-burst" aria-hidden="true">
+          <span class="lucky-burst-glow"></span>
+          <span class="lucky-burst-ring"></span>
+          <span class="lucky-burst-ring r2"></span>
+          <span class="lucky-spark"></span>
+          <span class="lucky-spark"></span>
+          <span class="lucky-spark"></span>
+          <span class="lucky-spark"></span>
+          <span class="lucky-spark"></span>
+          <span class="lucky-spark"></span>
+          <span class="lucky-spark"></span>
+          <span class="lucky-spark"></span>
+          <span class="lucky-spark"></span>
+          <span class="lucky-spark"></span>
+          <span class="lucky-spark"></span>
+          <span class="lucky-spark"></span>
+        </div>
+        <button class="lucky-go btn-gaze" id="btn-lucky-go" title="照住开转"><i aria-hidden="true"></i></button>
+        <div class="lucky-hint" id="lucky-hint">照住中间的星星 · 光圈充满即开转</div>
+      </div>
+      <!-- 中奖后的去向（原地收下，不开新弹窗）：脚注与按钮同槽位切换，转盘画面纹丝不动 -->
+      <div class="lucky-foot">
+        <div class="lucky-foot-note" id="lucky-foot-note">机会<b>仅此一次</b> · 抽中的棒棒糖通关后找工作人员领取</div>
+        <button class="btn btn-gaze btn-primary lucky-continue" id="btn-lucky-continue">收下 · 自由体验</button>
+      </div>
+    </div>
+
+    <!-- 补天终幕（可选通关视频：视频先行，面板后浮现） -->
+    <div class="layer" id="final">
+      <video id="final-video" class="hidden-video" playsinline muted></video>
+      <div id="final-video-text" class="final-video-text"></div>
+      <div class="final-content">
+        <div class="final-title">补天功成</div>
+        <div class="final-sub">女娲抬起头，看见了人间灯火。</div>
+        <div class="final-title-tag">称号 · 补天者</div>
+        <div class="stone-row" id="final-stones"></div>
+        <div class="final-total" id="final-total"></div>
+        <div class="final-end">古镇的灯火，今夜为你长明。</div>
+        <div class="btn-row">
+          <button class="btn btn-gaze btn-final-lucky" id="btn-final-lucky">转转幸运大转盘</button>
+          <button class="btn btn-gaze btn-primary" id="btn-final-replay">再看一次</button>
+          <button class="btn btn-gaze" id="btn-final-select">自由选关</button>
+          <button class="btn btn-gaze btn-danger" id="btn-reset-final">重新开始</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 自由选关 -->
+    <div class="layer" id="level-select">
+      <div class="select-title">四印已齐 · 自由选关</div>
+      <div class="select-grid" id="select-grid"></div>
+      <div class="select-footer">
+        <button class="btn btn-gaze" id="btn-select-back">返回</button>
+        <button class="btn btn-gaze btn-danger" id="btn-reset-select">重新开始</button>
+      </div>
+    </div>
+
+    <!-- 角色卡放大细观（弹窗，盖在最上层；照住卡片即打开） -->
+    <div class="layer" id="card-zoom">
+      <div class="zoom-box">
+        <button class="zoom-close btn-gaze" id="btn-zoom-close" title="关闭">✕</button>
+        <div class="zoom-card">
+          <div class="zoom-frame">
+              <img id="zoom-card-img" draggable="false" />
+              <div class="zoom-glyph" id="zoom-card-glyph"></div>
+            </div>
+          <div class="zoom-info">
+            <div class="zoom-info-head">
+              <div class="zoom-title" id="zoom-card-title"></div>
+              <div class="zoom-subtitle" id="zoom-card-subtitle"></div>
+            </div>
+            <div class="zoom-info-body">
+              <div class="zoom-desc" id="zoom-card-desc"></div>
+              <div class="zoom-lore">
+                <div class="lore-item">
+                  <span class="lore-k">灵光偏好</span>
+                  <span class="lore-v"><i class="lore-dot" id="zoom-card-lightdot"></i><span id="zoom-card-lightname"></span></span>
+                </div>
+                <div class="lore-item">
+                  <span class="lore-k">出没场景</span>
+                  <span class="lore-v" id="zoom-card-scene"></span>
+                </div>
+                <div class="lore-item">
+                  <span class="lore-k">所属灵印</span>
+                  <span class="lore-v" id="zoom-card-sealname"></span>
+                </div>
+              </div>
+              <div class="zoom-seal" id="zoom-card-seal"></div>
+            </div>
+            <div class="zoom-info-foot">
+              <div class="intro-start-hint">照住「返回」· 光圈充满即回到之前画面</div>
+              <div class="btn-row">
+                <button class="btn btn-gaze btn-primary" id="btn-zoom-back">返回</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 寻得指引浮层（非阻塞：找到角色后提醒看角色卡 + 找工作人员领奖；v1.8.0） -->
+    <div class="layer" id="guide-pop">
+      <div class="guide-box">
+        <div class="guide-title" id="guide-title">灯灵寻回！</div>
+        <div class="guide-line">点击<b>角色卡</b>，查看角色详情。</div>
+        <div class="guide-line guide-line-strong" id="guide-line-2">找到全部角色，<b>可以获得奖励</b>！</div>
+      </div>
+    </div>
+
+    <!-- 重置确认（弹窗，盖在最上层） -->
+    <div class="layer" id="reset-confirm">
+      <div class="reset-box panel">
+        <div class="reset-title">重燃梦灯？</div>
+        <div class="reset-text">清除全部进度——灵印、角色卡与称号都将归还夜色，故事从头讲起。</div>
+        <div class="btn-row">
+          <button class="btn btn-gaze btn-danger" id="btn-reset-confirm">清除重来</button>
+          <button class="btn btn-gaze" id="btn-reset-cancel">取消</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 设置面板（右上角按钮唤出：进度一览 + 清除数据入口） -->
+    <div class="layer" id="settings">
+      <div class="settings-box">
+        <div class="settings-title">设 置</div>
+        <div class="settings-progress" id="settings-progress"></div>
+        <div class="settings-stats" id="settings-stats"></div>
+        <div class="btn-row">
+          <button class="btn btn-gaze btn-danger" id="btn-settings-reset">清除游玩数据</button>
+          <button class="btn btn-gaze" id="btn-settings-close">关闭</button>
+        </div>
+        <div class="settings-version" id="settings-version"></div>
+      </div>
+    </div>
+
+    <!-- 失败 -->
+    <div class="layer" id="fail">
+      <div class="fail-text" id="fail-text"></div>
+    </div>
+
+    <!-- 错误 -->
+    <div class="layer" id="error">
+      <div class="panel">
+        <div class="loading-text" id="error-text"></div>
+      </div>
+    </div>
+
+    <!-- 轻提示 -->
+    <div id="toast"></div>
+
+  <!-- 输入切换 -->
+  <button id="input-toggle" class="btn-gaze">🖐 手势</button>
+
+  <!-- 右上角设置（随时可点：查看进度 / 清除数据） -->
+  <button id="btn-settings" class="btn-gaze" title="设置">⚙</button>
+  </div>
+
+  <!-- 光圈指针画布：盖在所有 UI 之上，弹窗/遮罩打开时光圈依然可见、可凝视 -->
+  <canvas id="cursor"></canvas>
+
+  <!-- ==================== 脚本 ==================== -->
+  <!-- 所有资源带版本号：改版后浏览器强制拉新文件，杜绝旧缓存界面 -->
+  <script src="js/config.js?v=1.13.0"></script>
+  <script src="js/voice-timings.js?v=1.13.0"></script>
+  <script src="js/utils.js?v=1.13.0"></script>
+
+  <!-- 手势识别（离线内置，模型在 assets/vendor/mediapipe/） -->
+  <script src="js/input/hand_driver.js?v=1.13.0"></script>
+  <script src="js/input/mouse_driver.js?v=1.13.0"></script>
+  <script src="js/input/input.js?v=1.13.0"></script>
+
+  <!-- 画面源 -->
+  <script src="js/city/city_source.js?v=1.13.0"></script>
+  <script src="js/city/video_city.js?v=1.13.0"></script>
+
+  <!-- 游戏数据与逻辑 -->
+  <script src="js/game/levels.js?v=1.13.0"></script>
+  <script src="js/game/save.js?v=1.13.0"></script>
+  <script src="js/game/success.js?v=1.13.0"></script>
+  <script src="js/game/hints.js?v=1.13.0"></script>
+  <script src="js/game/score.js?v=1.13.0"></script>
+
+  <!-- 渲染 -->
+  <script src="js/audio.js?v=1.13.0"></script>
+  <script src="js/render/effects.js?v=1.13.0"></script>
+  <script src="js/render/renderer.js?v=1.13.0"></script>
+  <script src="js/render/ui.js?v=1.13.0"></script>
+  <script src="js/game/game.js?v=1.13.0"></script>
+
+  <!-- 启动 -->
+  <script src="js/asset_check.js?v=1.13.0"></script>
+  <script src="js/main.js?v=1.13.0"></script>
+</body>
+</html>

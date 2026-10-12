@@ -1,0 +1,2581 @@
+/* ============================================================
+   灯影古镇 · 样式
+   全屏画布 + HTML 覆盖层。光色随关卡切换（--light-color）。
+   凝视按钮进度环：conic-gradient(--gp)。
+   ============================================================ */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --light-color: #ffd88a;
+  --gold: #ffd166;
+  --paper: #f3e6c8;
+  --night: #0a1020;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #05070d;
+  font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+  color: #f3e6c8;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---------- 主画布 ---------- */
+#stage {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: none;
+}
+
+img { -webkit-user-drag: none; }
+
+/* ---------- 覆盖层通用 ---------- */
+.ui {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3.4vh;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.55s ease;
+  text-align: center;
+  padding: 4vh 4vw;
+  overflow-y: auto;   /* 极矮窗口下保底可滚动，内容永不裁剪 */
+}
+
+.layer.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ---------- 凝视按钮（通用） ---------- */
+.btn-gaze {
+  --gp: 0;
+  position: relative;
+}
+
+.btn-gaze::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 999px;
+  padding: 2.5px;
+  background: conic-gradient(
+    var(--light-color) calc(var(--gp) * 360deg),
+    transparent calc(var(--gp) * 360deg)
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  pointer-events: none;
+}
+
+.btn-gaze.gazing::after { opacity: 1; }
+.btn-gaze.gazing { transform: scale(1.03); }
+.btn-gaze { transition: transform 0.18s ease, box-shadow 0.3s ease; }
+
+.btn {
+  padding: 14px 44px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 209, 102, 0.45);
+  background: rgba(10, 16, 32, 0.72);
+  color: #ffe6b0;
+  font-size: 17px;
+  letter-spacing: 0.14em;
+  font-family: inherit;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+
+.btn:hover {
+  background: rgba(28, 38, 62, 0.85);
+  box-shadow: 0 0 26px rgba(255, 180, 80, 0.25);
+}
+
+.btn-primary {
+  border-color: var(--light-color);
+  box-shadow: 0 0 18px rgba(255, 180, 80, 0.18);
+}
+
+/* 危险操作（清除进度等）：暖红，与金色调和 */
+.btn-danger {
+  border-color: rgba(224, 83, 63, 0.55);
+  color: #ffb8a6;
+}
+
+.btn-danger:hover {
+  background: rgba(54, 16, 12, 0.85);
+  box-shadow: 0 0 26px rgba(224, 83, 63, 0.28);
+}
+
+.btn-row {
+  display: flex;
+  gap: 18px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ---------- 面板 ---------- */
+.panel {
+  padding: 28px 46px;
+  border-radius: 16px;
+  background: rgba(8, 12, 24, 0.72);
+  border: 1px solid rgba(255, 208, 120, 0.18);
+  box-shadow: 0 0 60px rgba(0, 0, 0, 0.6);
+}
+
+.spinner {
+  width: 34px;
+  height: 34px;
+  margin: 0 auto 16px;
+  border: 3px solid rgba(255, 208, 120, 0.18);
+  border-top-color: #ffd166;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-text {
+  font-size: 16px;
+  letter-spacing: 2px;
+  color: rgba(243, 230, 200, 0.8);
+}
+
+/* ---------- 待机 ---------- */
+/* 待机层收紧行距：卡片放大后纵向不留大片空白 */
+#attract { gap: 1.4vh; }
+
+.attract-title {
+  font-size: clamp(34px, 5.8vw, 66px);
+  font-weight: 600;
+  letter-spacing: 0.35em;
+  text-indent: 0.35em;
+  color: #ffd88a;
+  text-shadow: 0 0 40px rgba(255, 180, 80, 0.45), 0 0 90px rgba(255, 140, 40, 0.25);
+  animation: breathe 4s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+
+.attract-sub {
+  font-size: clamp(12px, 1.3vw, 16px);
+  letter-spacing: 0.3em;
+  color: rgba(243, 230, 200, 0.6);
+}
+
+/* 四灵卡槽（裁剪竖版卡 ≈5:7，框随图走——竖框满图，不留黑边） */
+#attract-cards {
+  display: flex;
+  gap: clamp(10px, 1.5vw, 24px);
+  margin-top: 0.6vh;
+}
+
+.attract-card {
+  position: relative;
+  width: clamp(150px, 16vw, 250px);
+  aspect-ratio: 5 / 7;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 209, 102, 0.35);
+  background: #0a1020;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 220, 150, 0.06);
+  transition: transform 0.5s ease, box-shadow 0.5s ease, filter 0.8s ease;
+}
+
+.attract-card img {
+  width: 100%;
+  height: 100%;
+  /* 竖版卡图与框同比例（±6% 内），cover 铺满无留白；略偏上保住脸部 */
+  object-fit: cover;
+  object-position: 50% 18%;
+  display: block;
+}
+
+/* 未收集：石槽 + 大问号，完全不露出角色内容（保留收集惊喜） */
+.attract-card:not(.got) {
+  background: linear-gradient(165deg, #161e36 0%, #0b101f 60%, #070b16 100%);
+  border: 1px dashed rgba(255, 209, 102, 0.28);
+  box-shadow: inset 0 0 34px rgba(0, 0, 0, 0.65);
+  transform: translateY(6px) scale(0.96);
+}
+
+/* 未收集：卡面彻底遮蔽（旧剪影缩略图一并隐去，绝不剧透长相） */
+.attract-card:not(.got) img { visibility: hidden; }
+
+.attract-card:not(.got)::after {
+  content: '？';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 全角「？」在雅黑里墨迹偏左（字框前 24%），右移 0.26em 视觉回正 */
+  transform: translateX(0.26em);
+  font-size: clamp(52px, 6vw, 96px);
+  font-weight: 300;
+  color: rgba(255, 226, 174, 0.4);
+  text-shadow: 0 0 22px rgba(255, 200, 120, 0.28);
+  animation: unknownBreathe 3.4s ease-in-out infinite;
+}
+
+/* 已寻得：可点开细观（放大弹窗） */
+.attract-card.got {
+  box-shadow: 0 0 30px rgba(255, 190, 90, 0.4), 0 8px 26px rgba(0, 0, 0, 0.55);
+  animation: cardFloat 3.2s ease-in-out infinite;
+  cursor: pointer;
+}
+.attract-card.got:hover { filter: brightness(1.16) saturate(1.12); }
+.attract-card:not(.got) { cursor: help; }
+
+/* 已寻得：内嵌细金线双框裱画质感（与详情弹窗同款语言） */
+.attract-card.got::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 220, 150, 0.32);
+  box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.attract-card.got:nth-child(2) { animation-delay: 0.5s; }
+.attract-card.got:nth-child(3) { animation-delay: 1.0s; }
+.attract-card.got:nth-child(4) { animation-delay: 1.5s; }
+
+@keyframes cardFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.card-name {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  padding: 8px 4px;
+  font-size: clamp(13px, 1.5vw, 18px);
+  letter-spacing: 0.2em;
+  color: #ffe6b0;
+  background: linear-gradient(transparent, rgba(5, 8, 16, 0.9));
+}
+
+.card-stone {
+  position: absolute;
+  top: 8px; right: 9px;
+  width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  font-size: 15px;
+  color: #fff;
+  background: rgba(255, 200, 90, 0.88);
+  box-shadow: 0 0 12px rgba(255, 200, 90, 0.6);
+}
+
+.attract-card:not(.got) .card-stone {
+  background: rgba(70, 80, 105, 0.55);
+  box-shadow: none;
+  color: rgba(200, 210, 228, 0.45);
+}
+
+.card-unknown {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(44px, 5vw, 68px);
+  font-weight: 300;
+  color: rgba(255, 226, 174, 0.42);
+  text-shadow: 0 0 22px rgba(255, 200, 120, 0.22);
+  animation: unknownBreathe 3.4s ease-in-out infinite;
+}
+
+@keyframes unknownBreathe {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* 未收集时底部名字也隐藏，只留"？"的神秘 */
+.attract-card:not(.got) .card-name { visibility: hidden; }
+
+/* 打字机 */
+.attract-typed {
+  min-height: 3.2em;
+  font-size: clamp(14px, 1.65vw, 20px);
+  line-height: 1.65;
+  letter-spacing: 0.14em;
+  color: rgba(255, 230, 176, 0.9);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9);
+}
+
+.typed-line { min-height: 1.65em; }
+
+.attract-progress {
+  font-size: clamp(13px, 1.4vw, 17px);
+  letter-spacing: 0.24em;
+  color: var(--light-color);
+}
+
+.attract-input {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  color: rgba(255, 208, 120, 0.55);
+}
+
+/* 待机「开始游戏」按钮（凝视 1.5s 充满触发） */
+.attract-start-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 1.2vh;
+}
+
+.attract-start {
+  padding: 14px 58px;
+  font-size: clamp(17px, 2.1vw, 24px);
+  letter-spacing: 0.28em;
+  text-indent: 0.28em;
+  animation: startBreath 2.8s ease-in-out infinite;
+}
+
+/* 手势预览小窗（右上角·设置按钮下方；只在摄像头手势模式出现） */
+#hand-pip {
+  position: fixed;
+  top: 70px;
+  right: 14px;
+  width: 172px;
+  aspect-ratio: 4 / 3;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(120, 235, 200, 0.22);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  transition: opacity 0.4s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  pointer-events: none;
+  z-index: 25;
+}
+
+#hand-pip.show { opacity: 1; }
+
+#hand-pip.tracked {
+  border-color: rgba(120, 235, 200, 0.85);
+  box-shadow: 0 0 18px rgba(120, 235, 200, 0.35), 0 8px 26px rgba(0, 0, 0, 0.55);
+}
+
+#hand-pip video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transform: scaleX(-1);
+  background: #05070d;
+}
+
+#pip-dot {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  background: rgba(125, 245, 207, 0.3);
+  transition: background 0.2s ease;
+}
+
+#pip-dot.tracked {
+  background: #7df5cf;
+  box-shadow: 0 0 12px #7df5cf;
+}
+
+/* ---------- 序章 ---------- */
+#story { background: #04060c; }
+
+#story-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+#story-video.hidden-video { display: none; }
+
+.story-mask {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0) 30%, rgba(0,0,0,0.55) 100%);
+}
+
+#story.story-text-only {
+  background:
+    radial-gradient(ellipse 60% 45% at 50% 38%, rgba(46, 58, 96, 0.5), transparent),
+    #04060c;
+}
+
+.story-text {
+  position: relative;
+  max-width: 72vw;
+  font-size: clamp(19px, 2.4vw, 30px);
+  line-height: 2.0;
+  letter-spacing: 0.14em;
+  color: #ffe6b0;
+  text-shadow: 0 0 30px rgba(0, 0, 0, 0.95), 0 2px 12px rgba(0, 0, 0, 0.9);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.story-text.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 视频字幕：悬浮玻璃灯牌——暗色玻璃底 + 金线压顶，随片可读又好看 */
+.story-text.video-mode {
+  position: absolute;
+  bottom: 12vh;
+  padding: 14px 36px;
+  max-width: min(78vw, 940px);
+  text-align: center;
+  background: linear-gradient(180deg, rgba(6, 10, 20, 0.6), rgba(3, 5, 10, 0.76));
+  border: 1px solid rgba(255, 209, 102, 0.2);
+  border-radius: 14px;
+  backdrop-filter: blur(7px);
+  box-shadow: 0 12px 44px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 214, 130, 0.12);
+  font-size: clamp(18px, 2.2vw, 27px);
+}
+
+.story-text.video-mode::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -1px;
+  width: 38%;
+  height: 2px;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  border-radius: 2px;
+  opacity: 0.85;
+}
+
+/* ---------- 关前教学 ---------- */
+.intro-story {
+  max-width: 66vw;
+  font-size: clamp(15px, 1.7vw, 20px);
+  line-height: 1.85;
+  letter-spacing: 0.1em;
+  color: rgba(255, 232, 180, 0.82);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.95);
+}
+
+.intro-title {
+  font-size: clamp(30px, 4.4vw, 52px);
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  color: var(--light-color);
+  text-shadow: 0 0 34px rgba(0, 0, 0, 0.9);
+}
+
+.intro-subtitle {
+  margin-top: 8px;
+  font-size: clamp(13px, 1.4vw, 17px);
+  letter-spacing: 0.32em;
+  color: rgba(243, 230, 200, 0.62);
+}
+
+.intro-card {
+  display: flex;
+  align-items: stretch;
+  gap: clamp(14px, 2vw, 28px);
+  padding: clamp(14px, 2vh, 24px) clamp(18px, 2.4vw, 34px);
+  border-radius: 18px;
+  background: rgba(8, 12, 24, 0.72);
+  border: 1px solid rgba(255, 208, 120, 0.2);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  max-width: 78vw;
+  text-align: left;
+}
+
+/* 预告卡框：已寻得显示卡图，未寻得显示问号剪影（照住可放大细观） */
+.intro-card-frame {
+  position: relative;
+  flex: 0 0 auto;
+  /* 裁剪竖版卡 ≈5:7，框随图走：满图无留白，问号槽同步竖版 */
+  width: clamp(190px, 19vw, 300px);
+  aspect-ratio: 5 / 7;
+  max-height: 44vh;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 209, 102, 0.35);
+  background: #0a1020;
+  cursor: pointer;
+}
+
+.intro-card-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 18%;
+  display: block;
+}
+
+/* 未寻得：卡面彻底遮蔽（旧剪影一并废弃），只留呼吸的「？」 */
+
+.intro-card-frame.unknown {
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 46%, rgba(46, 58, 96, 0.5), transparent),
+    linear-gradient(165deg, #161e36 0%, #0b101f 60%, #070b16 100%);
+  border-style: dashed;
+  border-color: rgba(255, 209, 102, 0.3);
+  box-shadow: inset 0 0 34px rgba(0, 0, 0, 0.6);
+}
+
+/* 未寻得：隐去图，亮出问号（不让玩家提前看清角色长相） */
+.intro-card-frame.unknown img { visibility: hidden; }
+.intro-card-frame.unknown .card-unknown-mark { display: flex; }
+
+.card-unknown-mark {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  transform: translateX(0.26em);   /* 全角「？」墨迹居中修正 */
+  font-size: clamp(64px, 9vw, 120px);
+  font-weight: 300;
+  color: rgba(255, 226, 174, 0.45);
+  text-shadow: 0 0 26px rgba(255, 200, 120, 0.25);
+  animation: unknownBreathe 3.4s ease-in-out infinite;
+}
+
+.intro-card-frame.gazing { border-color: var(--light-color); }
+
+/* 卡片是矩形：凝视进度环跟随卡片圆角，而不是按钮的胶囊形 */
+.intro-card-frame::after,
+.spirit-card-frame::after { border-radius: 16px; }
+
+.intro-card-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.intro-card-title {
+  font-size: clamp(17px, 1.9vw, 23px);
+  letter-spacing: 0.18em;
+  color: var(--light-color);
+}
+
+.intro-rows { display: flex; flex-direction: column; gap: 7px; }
+
+.intro-row {
+  display: flex;
+  gap: 14px;
+  align-items: baseline;
+  font-size: clamp(13px, 1.5vw, 17px);
+  letter-spacing: 0.06em;
+  color: rgba(255, 236, 196, 0.92);
+}
+
+.row-label {
+  flex: 0 0 auto;
+  padding: 1px 12px;
+  border-radius: 999px;
+  font-size: 0.86em;
+  color: #0a1020;
+  background: rgba(255, 209, 102, 0.85);
+}
+
+.intro-tip {
+  font-size: clamp(11px, 1.2vw, 14px);
+  letter-spacing: 0.1em;
+  color: rgba(255, 190, 120, 0.62);
+}
+
+/* 「开始寻」确认按钮（凝视充满即出发，替代旧的自读跳过） */
+.intro-start-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.intro-start-hint {
+  font-size: clamp(12px, 1.3vw, 15px);
+  letter-spacing: 0.18em;
+  color: rgba(255, 230, 190, 0.58);
+}
+
+.intro-start {
+  padding: 15px 60px;
+  font-size: clamp(16px, 1.9vw, 22px);
+  letter-spacing: 0.24em;
+  animation: startBreath 2.8s ease-in-out infinite;
+}
+
+@keyframes startBreath {
+  0%, 100% { box-shadow: 0 0 14px rgba(255, 180, 80, 0.15); }
+  50% { box-shadow: 0 0 34px rgba(255, 190, 90, 0.42); }
+}
+
+/* ---------- 游玩角标 ---------- */
+#level-badge {
+  position: fixed;
+  top: 18px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  letter-spacing: 0.14em;
+  color: #ffe6b0;
+  background: rgba(8, 12, 24, 0.55);
+  border: 1px solid rgba(255, 209, 102, 0.28);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+}
+
+#level-badge.show { opacity: 1; }
+
+.badge-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--light-color);
+  box-shadow: 0 0 12px var(--light-color);
+}
+
+/* ---------- 提示 ---------- */
+#hint {
+  justify-content: flex-end;
+  padding-bottom: 11vh;
+}
+
+.hint-text {
+  padding: 13px 30px;
+  border-radius: 999px;
+  background: rgba(8, 12, 24, 0.66);
+  border: 1px solid rgba(255, 208, 120, 0.2);
+  font-size: clamp(15px, 1.8vw, 22px);
+  letter-spacing: 0.1em;
+  color: #ffe6b0;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  backdrop-filter: blur(4px);
+  max-width: 78vw;
+}
+
+.hint-text.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ---------- 假目标提醒 ---------- */
+#decoy-remind { justify-content: flex-start; padding-top: 13vh; }
+
+.decoy-remind-box {
+  padding: 13px 30px;
+  border-radius: 14px;
+  background: rgba(60, 16, 12, 0.78);
+  border: 1px solid rgba(255, 120, 90, 0.4);
+  font-size: clamp(14px, 1.6vw, 19px);
+  letter-spacing: 0.08em;
+  color: #ffd8c8;
+  box-shadow: 0 0 34px rgba(255, 80, 50, 0.2);
+  max-width: 74vw;
+}
+
+/* ---------- 成功：角色卡 + 结算 ---------- */
+#success {
+  justify-content: flex-start;
+  padding-top: 4vh;
+  background: linear-gradient(rgba(4, 6, 12, 0.30), rgba(4, 6, 12, 0.55) 70%);
+  overflow: hidden;
+}
+
+#success.show { pointer-events: auto; }
+
+/* 环境呼吸光晕：通关一瞬，整页随角色灯色涨落（复刻详情弹窗） */
+.success-aura {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  width: min(96vw, 1200px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--light-color) 13%, transparent) 0%, transparent 62%);
+  filter: blur(30px);
+  animation: zoomGlowBreath 4.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.success-stage {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.4vh;
+}
+
+.spirit-card {
+  display: flex;
+  gap: clamp(14px, 2vw, 30px);
+  align-items: stretch;
+  padding: clamp(16px, 2.2vh, 26px) clamp(20px, 2.4vw, 36px);
+  border-radius: 22px;
+  background: linear-gradient(165deg, rgba(18, 24, 48, 0.92) 0%, rgba(8, 12, 24, 0.9) 60%, rgba(10, 14, 30, 0.92) 100%);
+  border: 1px solid color-mix(in srgb, var(--light-color) 42%, transparent);
+  box-shadow:
+    0 0 46px color-mix(in srgb, var(--light-color) 22%, transparent),
+    0 24px 64px rgba(0, 0, 0, 0.62),
+    inset 0 1px 0 color-mix(in srgb, var(--light-color) 20%, transparent);
+  backdrop-filter: blur(7px);
+  max-width: 82vw;
+  text-align: left;
+  animation: cardReveal 1.1s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+@keyframes cardReveal {
+  0% { opacity: 0; filter: blur(14px) brightness(2.2); transform: scale(1.14); }
+  100% { opacity: 1; filter: blur(0) brightness(1); transform: scale(1); }
+}
+
+/* 卡面入场：由亮到实，微微转正（复刻 zoomFrameIn） */
+@keyframes scFrameIn {
+  0% { opacity: 0; transform: scale(1.14) rotate(-2.2deg); filter: brightness(1.65) saturate(1.25) blur(6px); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); filter: brightness(1) saturate(1) blur(0); }
+}
+
+/* 灯色内透呼吸 */
+@keyframes scGlowBreath {
+  0%, 100% { opacity: 0.16; }
+  50% { opacity: 0.42; }
+}
+
+/* 提示灯签浮现 + 缓缓呼吸 */
+@keyframes scHintIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+@keyframes scHintBreath {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.62; }
+}
+
+.spirit-card-frame {
+  flex: 0 0 auto;
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 2px solid var(--light-color);
+  box-shadow:
+    0 0 26px color-mix(in srgb, var(--light-color) 45%, transparent),
+    0 14px 30px rgba(0, 0, 0, 0.5),
+    inset 0 0 22px color-mix(in srgb, var(--light-color) 12%, transparent);
+  cursor: pointer;
+  /* 入场：由亮到实微微转正（复刻 zoomFrameIn），落定后缓缓浮沉（复刻 zoomFloat） */
+  animation:
+    scFrameIn 0.75s cubic-bezier(0.18, 0.8, 0.28, 1.08) 0.22s both,
+    zoomFloat 5.4s ease-in-out 2s infinite;
+  will-change: transform;
+}
+
+.spirit-card-frame img {
+  /* 通关卡改高度驱动：先定高（≤30vh）再按 5:7 竖版反推宽，保证整页一屏放下不出滚动 */
+  height: min(30vh, 300px);
+  width: auto;
+  max-width: 34vw;
+  aspect-ratio: 5 / 7;
+  object-fit: cover;
+  object-position: 50% 18%;
+  display: block;
+  background: #0a1020;
+}
+
+/* —— 角色卡质感层（全部复刻详情弹窗 zoom-frame）—— */
+
+/* 灯色内透：screen 叠加在卡面上，随呼吸涨落 */
+.sc-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--light-color) 32%, transparent) 0%, transparent 68%);
+  mix-blend-mode: screen;
+  animation: scGlowBreath 4.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* 缺图兜底：灵印占位（复刻 zoom-noimg） */
+.sc-glyph { display: none; }
+.spirit-card-frame.sc-noimg img { visibility: hidden; }
+.spirit-card-frame.sc-noimg {
+  background:
+    radial-gradient(circle at 50% 46%, color-mix(in srgb, var(--light-color) 22%, transparent), transparent 64%),
+    linear-gradient(165deg, #16203c 0%, #0b101f 60%, #070b16 100%);
+}
+.spirit-card-frame.sc-noimg .sc-glyph {
+  display: flex;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(54px, 11vh, 104px);
+  color: var(--light-color);
+  text-shadow: 0 0 30px color-mix(in srgb, var(--light-color) 60%, transparent);
+}
+
+/* 内嵌细金线：双框裱画质感 */
+.sc-inner-line {
+  position: absolute;
+  inset: 7px;
+  z-index: 2;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--light-color) 52%, transparent);
+  box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+/* 流光掠过：柔光周期性扫过卡面 */
+.sc-sheen {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: linear-gradient(112deg,
+    transparent 32%,
+    rgba(255, 255, 255, 0.13) 45%,
+    rgba(255, 246, 220, 0.3) 50%,
+    rgba(255, 255, 255, 0.13) 55%,
+    transparent 68%);
+  transform: translateX(-130%);
+  animation: zoomSheen 3.6s ease-in-out 1.4s infinite;
+  pointer-events: none;
+}
+
+/* 双萤火：两点暖光在卡面游弋 */
+.sc-firefly {
+  position: absolute;
+  z-index: 3;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--light-color);
+  box-shadow: 0 0 9px var(--light-color), 0 0 22px rgba(255, 210, 130, 0.65);
+  pointer-events: none;
+}
+
+.sc-f1 { left: 12%; top: 22%; animation: fireflyDrift 9s ease-in-out infinite; }
+
+.sc-f2 {
+  right: 14%;
+  bottom: 30%;
+  background: #ffe9b8;
+  box-shadow: 0 0 8px #ffe9b8, 0 0 20px rgba(255, 224, 160, 0.55);
+  animation: fireflyDrift 12s ease-in-out 2.5s infinite reverse;
+}
+
+/* 查看详情提示：浮在卡底的灯签 */
+.sc-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: rgba(6, 10, 22, 0.72);
+  border: 1px solid color-mix(in srgb, var(--light-color) 46%, transparent);
+  box-shadow: 0 0 16px rgba(0, 0, 0, 0.45), 0 0 12px color-mix(in srgb, var(--light-color) 24%, transparent);
+  font-size: clamp(10px, 1.1vw, 12px);
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+  color: #ffe9c0;
+  pointer-events: none;
+  animation: scHintIn 0.7s ease 1.7s both, scHintBreath 2.8s ease-in-out 2.6s infinite;
+}
+
+.sc-hint i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--light-color);
+  box-shadow: 0 0 8px var(--light-color);
+  animation: zoomGlowBreath 2.4s ease-in-out infinite;
+}
+
+/* 指引光点：卡心悬一盏小灯长明闪烁，引导玩家点卡（v1.9.0） */
+.sc-pulse {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 3;
+  width: 13px;
+  height: 13px;
+  /* 用 margin 居中：transform 留给呼吸动画用 */
+  margin: -6.5px 0 0 -6.5px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    #fff8e2 0%, var(--light-color) 52%, transparent 74%);
+  box-shadow: 0 0 10px var(--light-color), 0 0 24px rgba(255, 214, 140, 0.6);
+  pointer-events: none;
+  animation: scPulseBreath 1.6s ease-in-out infinite;
+}
+
+/* 光点外圈涟漪：周期扩散的一圈光环，点选暗示更强 */
+.sc-pulse::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--light-color) 72%, transparent);
+  animation: scPulseRing 1.6s ease-out infinite;
+}
+
+@keyframes scPulseBreath {
+  0%, 100% { opacity: 0.5; transform: scale(0.82); }
+  50%      { opacity: 1;   transform: scale(1.2); }
+}
+
+@keyframes scPulseRing {
+  0%   { opacity: 0.85; transform: scale(0.55); }
+  75%  { opacity: 0;    transform: scale(2.1); }
+  100% { opacity: 0;    transform: scale(2.1); }
+}
+
+.spirit-card-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  min-width: 0;
+  max-width: 40vw;
+  /* 题跋分隔：一缕灯色细线隔开画与字 */
+  border-left: 1px solid color-mix(in srgb, var(--light-color) 30%, transparent);
+  padding-left: clamp(14px, 1.6vw, 24px);
+}
+
+.spirit-card-title {
+  font-size: clamp(19px, 2.3vw, 30px);
+  letter-spacing: 0.2em;
+  color: var(--light-color);
+}
+
+.spirit-card-subtitle {
+  font-size: clamp(12px, 1.4vw, 16px);
+  letter-spacing: 0.24em;
+  color: rgba(255, 232, 190, 0.66);
+}
+
+.spirit-card-desc {
+  font-size: clamp(13px, 1.5vw, 17px);
+  line-height: 1.8;
+  letter-spacing: 0.06em;
+  color: rgba(255, 240, 214, 0.9);
+}
+
+.spirit-quote {
+  max-width: 68vw;
+  font-size: clamp(15px, 1.9vw, 23px);
+  line-height: 1.85;
+  letter-spacing: 0.1em;
+  color: #ffe9c0;
+  text-shadow: 0 0 26px rgba(0, 0, 0, 0.95);
+  animation: quoteFade 0.9s ease 0.55s both;
+}
+
+@keyframes quoteFade { from { opacity: 0; } to { opacity: 1; } }
+
+.success-panel {
+  position: relative;
+  padding: clamp(16px, 2.2vh, 26px) clamp(24px, 3vw, 44px);
+  border-radius: 20px;
+  background: linear-gradient(165deg, rgba(18, 24, 48, 0.92) 0%, rgba(8, 12, 24, 0.9) 60%, rgba(10, 14, 30, 0.92) 100%);
+  border: 1px solid rgba(255, 208, 120, 0.3);
+  box-shadow:
+    0 0 60px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 220, 150, 0.14);
+  backdrop-filter: blur(6px);
+  animation: quoteFade 0.8s ease 1.15s both;
+}
+
+/* 面板顶部鎏金细线：卷轴收口 */
+.success-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 8%;
+  right: 8%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 209, 102, 0.55), transparent);
+  box-shadow: 0 0 12px rgba(255, 209, 102, 0.35);
+  pointer-events: none;
+}
+
+.success-title {
+  font-size: clamp(21px, 2.7vw, 34px);
+  letter-spacing: 0.2em;
+  color: #ffe6b0;
+  text-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+}
+
+.success-score {
+  margin-top: 12px;
+  font-size: clamp(14px, 1.6vw, 19px);
+  letter-spacing: 0.08em;
+  color: rgba(255, 236, 200, 0.92);
+}
+
+.success-score strong {
+  color: var(--gold);
+  font-size: 1.25em;
+}
+
+.success-rows {
+  margin-top: 6px;
+  font-size: 0.88em;
+  color: rgba(243, 230, 200, 0.7);
+}
+
+.success-detail {
+  margin-top: 5px;
+  font-size: 0.82em;
+  color: rgba(255, 200, 120, 0.75);
+}
+
+/* 等级灵语：一句收束评语，灵符朱批的暖金 */
+.success-comment {
+  margin-top: 8px;
+  font-size: 0.9em;
+  letter-spacing: 0.08em;
+  color: rgba(255, 233, 192, 0.85);
+  text-shadow: 0 0 14px rgba(255, 210, 130, 0.25);
+}
+
+/* 四印槽 */
+.stone-row {
+  display: flex;
+  gap: clamp(12px, 1.8vw, 24px);
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.stone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.stone-glyph {
+  width: clamp(38px, 4.4vw, 54px);
+  height: clamp(38px, 4.4vw, 54px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: clamp(17px, 2vw, 24px);
+  color: rgba(200, 205, 215, 0.4);
+  background: rgba(16, 22, 38, 0.9);
+  border: 2px solid rgba(90, 98, 118, 0.5);
+}
+
+.stone.got .stone-glyph {
+  color: #fff8e8;
+  background: radial-gradient(circle at 32% 28%, #4a4336, #26241d);
+  border-color: var(--gold);
+  box-shadow: 0 0 16px rgba(255, 209, 102, 0.55), inset 0 0 10px rgba(255, 209, 102, 0.25);
+  text-shadow: 0 0 8px rgba(255, 220, 150, 0.8);
+  animation: stoneIn 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+}
+
+@keyframes stoneIn {
+  0% { transform: scale(0.2); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.stone-name {
+  font-size: clamp(10px, 1.1vw, 13px);
+  letter-spacing: 0.2em;
+  color: rgba(243, 230, 200, 0.55);
+}
+
+.stone.got .stone-name { color: var(--gold); }
+
+.next-line {
+  margin-top: 10px;
+  font-size: clamp(13px, 1.5vw, 18px);
+  letter-spacing: 0.12em;
+  color: rgba(255, 224, 176, 0.78);
+}
+
+#success .btn-row { margin-top: 14px; }
+
+/* ---------- 终幕 ---------- */
+#final {
+  justify-content: flex-end;
+  padding-bottom: 6vh;
+}
+
+/* 通关视频先行：视频铺满，字幕下悬浮；面板由 .no-panel 藏到视频放完 */
+#final-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #04060c;
+}
+
+#final-video.hidden-video { display: none; }
+
+#final.no-panel .final-content { display: none; }
+
+.final-video-text {
+  position: absolute;
+  bottom: 12vh;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(78vw, 940px);
+  text-align: center;
+  padding: 14px 36px;
+  font-size: clamp(20px, 2.5vw, 32px);
+  line-height: 2.0;
+  letter-spacing: 0.14em;
+  color: #ffe6b0;
+  text-shadow: 0 0 30px rgba(0, 0, 0, 0.95), 0 2px 12px rgba(0, 0, 0, 0.9);
+  /* 与序章同款玻璃灯牌 */
+  background: linear-gradient(180deg, rgba(6, 10, 20, 0.6), rgba(3, 5, 10, 0.76));
+  border: 1px solid rgba(255, 209, 102, 0.2);
+  border-radius: 14px;
+  backdrop-filter: blur(7px);
+  box-shadow: 0 12px 44px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 214, 130, 0.12);
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.final-video-text::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -1px;
+  width: 38%;
+  height: 2px;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  border-radius: 2px;
+  opacity: 0.85;
+}
+
+.final-video-text.show { opacity: 1; }
+
+/* 画布先演完「四印升天 · 灵光织天」，面板此时才浮现（game 按时序 show） */
+.final-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.7vh;
+  padding: clamp(20px, 3.2vh, 36px) clamp(36px, 7vw, 110px);
+  border-radius: 24px;
+  background: rgba(6, 9, 18, 0.62);
+  border: 1px solid rgba(255, 214, 130, 0.26);
+  box-shadow: 0 0 80px rgba(0, 0, 0, 0.6), 0 0 40px rgba(255, 190, 90, 0.10);
+  backdrop-filter: blur(8px);
+  animation: finalRise 1.4s cubic-bezier(0.2, 0.8, 0.3, 1) 0.15s both;
+}
+
+@keyframes finalRise {
+  0% { opacity: 0; transform: translateY(26px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.final-title {
+  font-size: clamp(34px, 5vw, 64px);
+  font-weight: 600;
+  letter-spacing: 0.4em;
+  text-indent: 0.4em;
+  color: #ffe9b8;
+  text-shadow: 0 0 44px rgba(255, 200, 110, 0.5), 0 0 110px rgba(255, 160, 60, 0.3);
+}
+
+.final-sub {
+  font-size: clamp(14px, 1.7vw, 20px);
+  letter-spacing: 0.22em;
+  color: rgba(243, 230, 200, 0.72);
+}
+
+.final-title-tag {
+  padding: 6px 26px;
+  border-radius: 999px;
+  font-size: clamp(13px, 1.4vw, 17px);
+  letter-spacing: 0.3em;
+  color: #0a1020;
+  background: linear-gradient(120deg, #ffd166, #ffb45c);
+  box-shadow: 0 0 26px rgba(255, 190, 90, 0.5);
+}
+
+.final-total {
+  font-size: clamp(15px, 1.8vw, 21px);
+  letter-spacing: 0.16em;
+  color: #ffe6b0;
+}
+
+.final-end {
+  font-size: clamp(13px, 1.5vw, 18px);
+  letter-spacing: 0.2em;
+  color: rgba(255, 232, 186, 0.66);
+}
+
+/* ---------- 自由选关 ---------- */
+.select-title {
+  font-size: clamp(22px, 3vw, 36px);
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  color: #ffd88a;
+}
+
+.select-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(12px, 1.6vw, 22px);
+  width: min(86vw, 900px);
+}
+
+.select-item {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 18px;
+  border-radius: 16px;
+  background: rgba(10, 14, 26, 0.78);
+  border: 1px solid rgba(255, 209, 102, 0.25);
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.2s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.select-item:hover, .select-item.gazing {
+  transform: translateY(-3px);
+  border-color: rgba(255, 209, 102, 0.55);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.5), 0 0 22px rgba(255, 190, 90, 0.18);
+}
+
+.select-item.cleared { border-color: rgba(120, 210, 190, 0.4); }
+
+.select-item img {
+  /* 选关小卡：裁剪竖版图（带1），竖框 cover 铺满不留黑边 */
+  width: clamp(120px, 12vw, 170px);
+  aspect-ratio: 5 / 7;
+  object-fit: cover;
+  object-position: 50% 18%;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 209, 102, 0.3);
+  background: #0a1020;
+}
+
+/* 选关·未解锁：不露卡面，虚框石槽 + 呼吸问号（保留寻找的乐趣） */
+.select-item.locked {
+  border-style: dashed;
+  border-color: rgba(255, 209, 102, 0.16);
+}
+
+.select-item.locked .select-unknown {
+  width: clamp(120px, 12vw, 170px);
+  aspect-ratio: 5 / 7;
+  border-radius: 10px;
+  border: 1px dashed rgba(255, 209, 102, 0.3);
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 46%, rgba(46, 58, 96, 0.5), transparent),
+    linear-gradient(165deg, #161e36 0%, #0b101f 60%, #070b16 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateX(0.26em);   /* 全角「？」墨迹居中修正 */
+  font-size: clamp(38px, 4.2vw, 64px);
+  font-weight: 300;
+  color: rgba(255, 226, 174, 0.42);
+  text-shadow: 0 0 20px rgba(255, 200, 120, 0.25);
+  animation: unknownBreathe 3.4s ease-in-out infinite;
+  flex: 0 0 auto;
+}
+
+.select-item.locked .select-name { color: rgba(243, 230, 200, 0.55); }
+.select-item.locked .select-scene { color: rgba(243, 230, 200, 0.4); }
+
+.select-info { min-width: 0; }
+
+.select-name {
+  font-size: clamp(15px, 1.7vw, 20px);
+  letter-spacing: 0.14em;
+  color: #ffe6b0;
+}
+
+.select-scene {
+  margin-top: 4px;
+  font-size: clamp(12px, 1.3vw, 15px);
+  letter-spacing: 0.1em;
+  color: rgba(243, 230, 200, 0.6);
+}
+
+.select-best {
+  margin-top: 6px;
+  font-size: clamp(11px, 1.2vw, 14px);
+  color: rgba(140, 235, 210, 0.8);
+}
+
+.select-footer {
+  display: flex;
+  gap: 18px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ---------- 角色卡放大细观（弹窗，最上层） ----------
+   根治「一打开就常驻、关不掉」：此前 zoomFade 的 fill-mode:both 把
+   opacity:1 永久钉在这一层上，盖过 .layer 的 opacity:0 —— 页面一开机
+   弹窗就"看得见却点不动"。现在显隐完全交给 .layer / .layer.show，
+   入场动画只由内部 .zoom-box 承担，本体不再挂任何 opacity 动画。 */
+#card-zoom {
+  background: radial-gradient(ellipse at 50% 42%, rgba(12, 18, 38, 0.84) 0%, rgba(2, 4, 10, 0.94) 100%);
+  z-index: 46;
+}
+
+/* 环境光晕：随角色灯色缓缓呼吸 */
+#card-zoom::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(92vw, 1160px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--light-color) 15%, transparent) 0%, transparent 62%);
+  filter: blur(28px);
+  animation: zoomGlowBreath 4.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* （旧 zoomFade 已删：它正是弹窗常驻的元凶） */
+
+@keyframes zoomGlowBreath {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.zoom-box {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  /* 上下铺满：弹窗吃满视口高度，仅留一丝呼吸缝 */
+  height: min(97vh, 1240px);
+  padding: clamp(10px, 1.6vh, 22px) clamp(14px, 1.8vw, 30px);
+  border-radius: 22px;
+  background: linear-gradient(165deg, rgba(18, 24, 48, 0.94) 0%, rgba(8, 12, 24, 0.93) 60%, rgba(10, 14, 30, 0.94) 100%);
+  border: 1px solid color-mix(in srgb, var(--light-color) 42%, transparent);
+  box-shadow:
+    0 0 70px rgba(0, 0, 0, 0.7),
+    0 0 34px color-mix(in srgb, var(--light-color) 14%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--light-color) 22%, transparent);
+  backdrop-filter: blur(8px);
+  width: min(97vw, 1880px);
+  max-width: 97vw;
+  animation: zoomBoxIn 0.6s cubic-bezier(0.2, 0.8, 0.3, 1.12) both;
+}
+
+@keyframes zoomBoxIn {
+  0% { opacity: 0; transform: scale(0.84) translateY(26px); }
+  60% { opacity: 1; transform: scale(1.015) translateY(-3px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* 萤火：两点暖光在画框内缓缓游弋（纯装饰，不挡点击） */
+.zoom-box::before {
+  content: '';
+  position: absolute;
+  left: 9%;
+  top: 20%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--light-color);
+  box-shadow: 0 0 10px var(--light-color), 0 0 26px rgba(255, 210, 130, 0.7);
+  animation: fireflyDrift 9s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.zoom-box::after {
+  content: '';
+  position: absolute;
+  right: 11%;
+  bottom: 26%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #ffe9b8;
+  box-shadow: 0 0 9px #ffe9b8, 0 0 22px rgba(255, 224, 160, 0.6);
+  animation: fireflyDrift 12s ease-in-out 2.5s infinite reverse;
+  pointer-events: none;
+}
+
+@keyframes fireflyDrift {
+  0%, 100% { transform: translate(0, 0); opacity: 0.35; }
+  25% { opacity: 0.9; }
+  50% { transform: translate(46px, -34px); opacity: 0.55; }
+  75% { opacity: 0.85; }
+}
+
+/* 右上角✕：随手一按就能走，不必非要凝视 */
+.zoom-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 209, 102, 0.4);
+  background: rgba(10, 16, 32, 0.6);
+  color: #ffe6b0;
+  font-size: 19px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 5;
+  font-family: inherit;
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.zoom-close:hover {
+  transform: rotate(90deg) scale(1.08);
+  border-color: var(--light-color);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--light-color) 45%, transparent);
+}
+
+/* 图左文右：满幅展卷式——卡图独占左幅、上下顶满、向右铺开，题跋竖列居右 */
+.zoom-card {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: center;
+  text-align: left;
+  gap: clamp(10px, 1.2vw, 22px);
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+
+.zoom-frame {
+  position: relative;
+  /* 弹性主轴：吃掉右列之外的全部宽度，图越大细节越清晰 */
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  max-width: 165vh; /* 超宽屏保险：接近 3:2 原始画幅，几乎零裁剪 */
+  border-radius: 16px;
+  overflow: hidden;
+  border: 2px solid var(--light-color);
+  box-shadow:
+    0 0 36px color-mix(in srgb, var(--light-color) 45%, transparent),
+    0 20px 46px rgba(0, 0, 0, 0.55),
+    inset 0 0 26px color-mix(in srgb, var(--light-color) 14%, transparent);
+  animation: zoomFrameIn 0.65s cubic-bezier(0.18, 0.8, 0.28, 1.08) both;
+  will-change: transform;
+}
+
+/* 卡面入场：由亮到实，微微转正 */
+@keyframes zoomFrameIn {
+  0% { opacity: 0; transform: scale(1.16) rotate(-2.4deg); filter: brightness(1.7) saturate(1.3) blur(7px); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); filter: brightness(1) saturate(1) blur(0); }
+}
+
+/* 卡面悬灯：缓缓浮沉 */
+@keyframes zoomFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+
+/* 内嵌细金线：双框裱画质感 */
+.zoom-frame::before {
+  content: '';
+  position: absolute;
+  inset: 7px;
+  border-radius: 11px;
+  border: 1px solid color-mix(in srgb, var(--light-color) 52%, transparent);
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* 流光掠过：柔光周期性扫过卡面 */
+.zoom-frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(112deg,
+    transparent 32%,
+    rgba(255, 255, 255, 0.14) 45%,
+    rgba(255, 246, 220, 0.32) 50%,
+    rgba(255, 255, 255, 0.14) 55%,
+    transparent 68%);
+  transform: translateX(-130%);
+  animation: zoomSheen 3.4s ease-in-out 1.15s infinite;
+  pointer-events: none;
+  z-index: 3;
+}
+
+@keyframes zoomSheen {
+  0% { transform: translateX(-130%); }
+  42%, 100% { transform: translateX(130%); }
+}
+
+.zoom-frame img {
+  /* 详情页主角：上下左右全部铺满框体，画面细节一览无余 */
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: #0a1020;
+  animation: zoomImgIn 0.8s cubic-bezier(0.16, 0.8, 0.3, 1) both;
+}
+
+@keyframes zoomImgIn {
+  0% { opacity: 0; transform: scale(1.12); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* 兜底：卡图缺失时显示灵印占位，绝不出现空黑盒 */
+.zoom-frame.zoom-noimg img { visibility: hidden; }
+.zoom-frame.zoom-noimg {
+  background:
+    radial-gradient(circle at 50% 46%,
+      color-mix(in srgb, var(--light-color) 24%, transparent), transparent 64%),
+    linear-gradient(165deg, #16203c 0%, #0b101f 60%, #070b16 100%);
+}
+.zoom-glyph { display: none; }
+.zoom-frame.zoom-noimg .zoom-glyph {
+  display: flex;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(88px, 17vh, 160px);
+  color: var(--light-color);
+  text-shadow: 0 0 34px color-mix(in srgb, var(--light-color) 65%, transparent);
+  animation: zoomImgIn 0.8s cubic-bezier(0.16, 0.8, 0.3, 1) both;
+}
+
+.zoom-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0;
+  min-width: 0;
+  flex: 0 0 auto;
+  width: clamp(248px, 26.5vw, 408px);
+  padding: clamp(16px, 2.6vh, 28px) clamp(16px, 1.5vw, 24px);
+  border-radius: 14px;
+  /* 宣纸质感：极淡的暖纸渐变铺底 */
+  background: linear-gradient(180deg, rgba(243, 230, 200, 0.05), rgba(243, 230, 200, 0.015));
+  border: 1px solid rgba(255, 220, 150, 0.12);
+}
+
+/* 题跋三段式：头部（名讳）· 主体（事迹）· 落款（印 + 操作） */
+.zoom-info-head { width: 100%; }
+
+.zoom-info-body {
+  width: 100%;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: clamp(12px, 2vh, 20px);
+  padding: clamp(10px, 1.8vh, 20px) 0;
+}
+
+.zoom-info-foot { width: 100%; }
+
+/* 题跋卷首鎏金线：一炷香式的细金光，紧贴名讳上方 */
+.zoom-info-head::before {
+  content: '';
+  display: block;
+  width: min(100%, 240px);
+  height: 1px;
+  margin-bottom: clamp(10px, 1.6vh, 16px);
+  background: linear-gradient(90deg, transparent, var(--light-color), transparent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--light-color) 55%, transparent);
+  transform-origin: center;
+  animation: zoomLineGrow 0.9s cubic-bezier(0.2, 0.8, 0.3, 1) 0.5s both;
+}
+
+@keyframes zoomLineGrow {
+  0% { transform: scaleX(0); opacity: 0; }
+  100% { transform: scaleX(1); opacity: 1; }
+}
+
+/* 文案逐行浮现 */
+.zoom-title,
+.zoom-subtitle,
+.zoom-desc {
+  opacity: 0;
+  animation: zoomTextIn 0.55s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+.zoom-title { animation-delay: 0.24s; }
+.zoom-subtitle { animation-delay: 0.4s; }
+.zoom-desc { animation-delay: 0.56s; }
+
+@keyframes zoomTextIn {
+  0% { opacity: 0; transform: translateY(16px); filter: blur(5px); }
+  100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+/* 提示与按钮最后入场（已并入右列题跋底部） */
+#card-zoom .intro-start-hint,
+#card-zoom .btn-row {
+  opacity: 0;
+  animation: zoomTextIn 0.5s ease both 0.75s;
+}
+
+#card-zoom .intro-start-hint {
+  font-size: clamp(10px, 1vw, 13px);
+  letter-spacing: 0.12em;
+  line-height: 1.75;
+  text-align: left;
+  color: rgba(255, 230, 190, 0.52);
+  padding-bottom: 10px;
+  border-bottom: 1px dashed rgba(255, 220, 150, 0.16);
+  margin-bottom: 12px;
+}
+
+#card-zoom .btn-row {
+  justify-content: stretch;
+  margin-top: 0;
+}
+
+/* 返回：题跋落款式大按钮——全宽、鎏金描边、凝视进度环贴边流转 */
+#card-zoom .btn-row .btn {
+  width: 100%;
+  padding: 13px 0;
+  font-size: clamp(14px, 1.3vw, 18px);
+  letter-spacing: 0.5em;
+  text-indent: 0.5em;
+  background: linear-gradient(165deg, rgba(255, 198, 92, 0.2) 0%, rgba(255, 158, 56, 0.08) 100%);
+  border: 1px solid color-mix(in srgb, var(--light-color) 55%, transparent);
+  box-shadow:
+    0 0 22px color-mix(in srgb, var(--light-color) 16%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  transition: transform 0.18s ease, box-shadow 0.3s ease, background 0.3s ease;
+}
+
+#card-zoom .btn-row .btn:hover {
+  background: linear-gradient(165deg, rgba(255, 198, 92, 0.32) 0%, rgba(255, 158, 56, 0.16) 100%);
+  box-shadow:
+    0 0 34px color-mix(in srgb, var(--light-color) 30%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.zoom-title {
+  font-size: clamp(21px, 2.2vw, 32px);
+  letter-spacing: 0.18em;
+  color: var(--light-color);
+  text-shadow: 0 0 26px rgba(0, 0, 0, 0.8), 0 0 44px color-mix(in srgb, var(--light-color) 30%, transparent);
+}
+
+.zoom-subtitle {
+  margin-top: 6px;
+  font-size: clamp(12px, 1.15vw, 16px);
+  letter-spacing: 0.24em;
+  color: rgba(255, 232, 190, 0.72);
+}
+
+.zoom-desc {
+  font-size: clamp(14.5px, 1.5vw, 19px);
+  line-height: 1.92;
+  letter-spacing: 0.05em;
+  text-align: justify;
+  color: rgba(255, 243, 218, 0.94);
+  max-width: 52em;
+}
+
+/* ---- 灵韵卷宗：三行情报条目（偏好灵光 / 出没场景 / 所属灵印）----
+   既是题跋装饰，也是给玩家的真实寻灵线索；虚线分隔似册页界栏 */
+.zoom-lore {
+  width: 100%;
+  opacity: 0;
+  animation: zoomTextIn 0.55s cubic-bezier(0.2, 0.7, 0.3, 1) 0.64s both;
+}
+
+.lore-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: clamp(7px, 1.15vh, 11px) 2px;
+  border-bottom: 1px dashed rgba(255, 220, 150, 0.18);
+}
+
+.lore-item:last-child { border-bottom: none; }
+
+.lore-k {
+  flex: 0 0 auto;
+  font-size: clamp(11px, 1.02vw, 13.5px);
+  letter-spacing: 0.32em;
+  color: rgba(255, 220, 160, 0.5);
+}
+
+.lore-v {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  text-align: right;
+  font-size: clamp(13px, 1.18vw, 15.5px);
+  letter-spacing: 0.1em;
+  color: rgba(255, 243, 218, 0.95);
+}
+
+/* 灵光色珠：点出该灵偏好的灯光颜色，光晕随主题色呼吸 */
+.lore-dot {
+  flex: 0 0 auto;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--light-color);
+  box-shadow: 0 0 10px var(--light-color), 0 0 3px #fff inset;
+  animation: loreDotPulse 2.4s ease-in-out infinite;
+}
+
+@keyframes loreDotPulse {
+  0%, 100% { box-shadow: 0 0 8px var(--light-color), 0 0 3px #fff inset; }
+  50% { box-shadow: 0 0 16px var(--light-color), 0 0 3px #fff inset; }
+}
+
+/* 灵纹印章：朱砂方章，落于事迹末尾，微微倾斜似手钤 */
+.zoom-seal {
+  align-self: flex-end;
+  width: clamp(38px, 4.6vh, 50px);
+  height: clamp(38px, 4.6vh, 50px);
+  margin-top: clamp(10px, 1.8vh, 18px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(20px, 2.4vh, 27px);
+  font-family: "KaiTi", "STKaiti", "楷体", serif;
+  color: #fff5ec;
+  background: linear-gradient(160deg, #c43a2a 0%, #96220f 100%);
+  border-radius: 7px;
+  transform: rotate(-4deg);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+  box-shadow:
+    0 3px 12px rgba(0, 0, 0, 0.42),
+    0 0 20px rgba(196, 58, 42, 0.32),
+    inset 0 0 9px rgba(255, 255, 255, 0.16),
+    inset 0 0 2px rgba(255, 255, 255, 0.3);
+  opacity: 0;
+  animation: zoomSealIn 0.5s cubic-bezier(0.2, 0.8, 0.3, 1.2) 0.72s both;
+}
+
+@keyframes zoomSealIn {
+  0% { opacity: 0; transform: rotate(-4deg) scale(1.7); filter: blur(3px); }
+  100% { opacity: 1; transform: rotate(-4deg) scale(1); filter: blur(0); }
+}
+
+/* ---------- 寻得指引浮层（非阻塞，v1.8.0） ----------
+   有意不进 _modal 体系：整层 pointer-events: none（.layer 自带），
+   玩家照常可点角色大卡与按钮；v1.12.0 改为顶部胶囊——贴顶悬浮，
+   中间让给角色大卡与场景元素，彻底不遮挡后方内容；
+   8 秒自动退场由 JS 定时负责，hideAll 兜底 */
+#guide-pop {
+  z-index: 26;
+  justify-content: flex-start;
+  padding-top: clamp(56px, 8vh, 92px);   /* 避开顶部 toast 与右上设置钮 */
+}
+
+.guide-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5vh;
+  max-width: 86vw;
+  padding: clamp(16px, 2.8vh, 28px) clamp(26px, 3.6vw, 52px);
+  border-radius: 18px;
+  text-align: center;
+  background: linear-gradient(165deg, rgba(18, 24, 48, 0.93) 0%, rgba(8, 12, 24, 0.91) 100%);
+  border: 1px solid color-mix(in srgb, var(--light-color) 46%, transparent);
+  box-shadow: 0 0 54px rgba(0, 0, 0, 0.6), 0 0 26px rgba(255, 200, 110, 0.16);
+  /* v1.13.0 去毛玻璃：backdrop-filter 每帧对背后的视频画面整屏重采样，
+     手势/头控设备 GPU 吃满 → 掉帧 → 凝视充能随 dt 累积真实减速；
+     底色本就 9 成不透明，去掉毛玻璃肉眼几乎无差 */
+  opacity: 0;
+  transform: translateY(28px) scale(0.96);
+  transition: opacity 0.45s cubic-bezier(0.2, 0.8, 0.3, 1),
+              transform 0.45s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+#guide-pop.show .guide-box {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* 卷首一炷金光：呼应题跋式弹窗的细金线 */
+.guide-box::before {
+  content: '';
+  width: min(64%, 240px);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--light-color), transparent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--light-color) 55%, transparent);
+}
+
+.guide-title {
+  font-size: clamp(20px, 2.6vw, 30px);
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  color: var(--light-color);
+  text-shadow: 0 0 26px rgba(255, 170, 70, 0.4);
+}
+
+.guide-line {
+  font-size: clamp(13.5px, 1.4vw, 17px);
+  line-height: 1.85;
+  letter-spacing: 0.08em;
+  color: rgba(243, 230, 200, 0.85);
+}
+
+.guide-line b {
+  font-weight: 600;
+  color: #ffd88a;
+  text-shadow: 0 0 14px rgba(255, 200, 110, 0.45);
+}
+
+.guide-line-strong { color: rgba(255, 236, 200, 0.95); }
+
+/* 三行文案依次浮现；隐藏时无延迟，退场干脆 */
+.guide-title,
+.guide-line {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+#guide-pop.show .guide-title       { opacity: 1; transform: none; transition-delay: 0.12s; }
+#guide-pop.show .guide-line        { opacity: 1; transform: none; transition-delay: 0.26s; }
+#guide-pop.show .guide-line-strong { transition-delay: 0.4s; }
+
+/* ---------- 重置确认（弹窗） ---------- */
+#reset-confirm {
+  background: rgba(2, 4, 10, 0.8);
+  z-index: 45;
+}
+
+.reset-title {
+  font-size: clamp(22px, 3vw, 34px);
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  color: #ffd88a;
+  text-shadow: 0 0 30px rgba(255, 170, 70, 0.35);
+}
+
+.reset-text {
+  margin-top: 1.6vh;
+  font-size: clamp(14px, 1.6vw, 18px);
+  line-height: 1.9;
+  letter-spacing: 0.08em;
+  color: rgba(243, 230, 200, 0.78);
+  max-width: 32em;
+}
+
+#reset-confirm .btn-row {
+  margin-top: 3vh;
+}
+
+/* ---------- 失败 ---------- */
+#fail { background: rgba(2, 3, 8, 0.68); }
+
+.fail-text {
+  font-size: clamp(18px, 2.4vw, 30px);
+  letter-spacing: 0.2em;
+  color: rgba(200, 205, 220, 0.7);
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.9);
+}
+
+/* ---------- 轻提示 ---------- */
+#toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translate(-50%, -16px);
+  padding: 10px 26px;
+  border-radius: 999px;
+  background: rgba(8, 14, 28, 0.82);
+  border: 1px solid rgba(255, 209, 102, 0.35);
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  color: #ffe6b0;
+  opacity: 0;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  pointer-events: none;
+  z-index: 40;
+}
+
+#toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* ---------- 右上角设置按钮 ---------- */
+#btn-settings {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 209, 102, 0.4);
+  background: rgba(8, 14, 28, 0.72);
+  pointer-events: auto;   /* .ui 整体不接鼠标，按钮须单独恢复（否则真点击穿透） */
+  color: #ffe6b0;
+  font-size: 19px;
+  font-family: inherit;
+  cursor: pointer;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+#btn-settings:hover {
+  transform: rotate(90deg);
+  border-color: var(--light-color);
+  box-shadow: 0 0 20px rgba(255, 200, 110, 0.4);
+}
+
+/* ---------- 设置面板 ---------- */
+#settings {
+  background: rgba(2, 4, 10, 0.78);
+  z-index: 47;
+}
+
+.settings-box {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.2vh;
+  padding: clamp(22px, 3.6vh, 42px) clamp(30px, 5vw, 72px);
+  border-radius: 22px;
+  background: linear-gradient(165deg, rgba(18, 24, 48, 0.95) 0%, rgba(8, 12, 24, 0.94) 100%);
+  border: 1px solid color-mix(in srgb, var(--light-color) 38%, transparent);
+  box-shadow: 0 0 70px rgba(0, 0, 0, 0.7), 0 0 30px rgba(255, 200, 110, 0.12);
+  backdrop-filter: blur(8px);
+  max-width: 86vw;
+  animation: zoomBoxIn 0.5s cubic-bezier(0.2, 0.8, 0.3, 1.1) both;
+}
+
+.settings-title {
+  font-size: clamp(22px, 3vw, 34px);
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  color: var(--light-color);
+  text-shadow: 0 0 26px rgba(255, 170, 70, 0.3);
+}
+
+/* 四灵印进度：已寻得的亮起，未寻得的暗槽 */
+.settings-progress {
+  display: flex;
+  gap: 12px;
+}
+
+.settings-gem {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  border: 1px dashed rgba(255, 209, 102, 0.3);
+  background: rgba(10, 16, 32, 0.6);
+  color: rgba(255, 226, 174, 0.35);
+}
+
+.settings-gem.got {
+  border-style: solid;
+  border-color: var(--light-color);
+  color: var(--light-color);
+  text-shadow: 0 0 12px rgba(255, 200, 110, 0.6);
+  box-shadow: 0 0 16px rgba(255, 200, 110, 0.28), inset 0 0 10px rgba(255, 200, 110, 0.14);
+  animation: gemPop 0.5s ease both;
+}
+
+@keyframes gemPop {
+  0% { transform: scale(0.4); opacity: 0; }
+  70% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.settings-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: clamp(13px, 1.4vw, 16px);
+  letter-spacing: 0.1em;
+  line-height: 1.9;
+  color: rgba(243, 230, 200, 0.72);
+  text-align: center;
+}
+
+.settings-version {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: rgba(243, 230, 200, 0.4);
+}
+
+#settings .btn-row {
+  margin-top: 0.5vh;
+}
+
+/* ---------- 输入切换 ---------- */
+#input-toggle {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 209, 102, 0.3);
+  background: rgba(8, 14, 28, 0.7);
+  color: rgba(255, 230, 190, 0.85);
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  font-family: inherit;
+  backdrop-filter: blur(4px);
+  z-index: 30;
+  pointer-events: auto;   /* 同上：.ui 里要能被真鼠标点到的元素需单独恢复 */
+}
+
+#input-toggle.hand { border-color: rgba(120, 235, 200, 0.5); }
+#input-toggle.mouse { border-color: rgba(255, 209, 102, 0.5); }
+#input-toggle.busy { opacity: 0.55; }
+
+/* ---------- 光圈指针画布（盖在所有 UI / 弹窗之上） ---------- */
+#cursor {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ---------- 调试 ---------- */
+#debug {
+  position: fixed;
+  left: 12px;
+  top: 60px;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 50;
+  pointer-events: none;
+}
+
+#debug.show { display: flex; }
+
+#debug-text {
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.72);
+  border: 1px solid rgba(120, 235, 200, 0.3);
+  font: 12px/1.7 Consolas, monospace;
+  color: #9df5d8;
+  white-space: pre;
+  max-height: 70vh;
+  overflow: hidden;
+}
+
+#debug-camera {
+  width: 213px;
+  height: 160px;
+  border-radius: 10px;
+  border: 1px solid rgba(120, 235, 200, 0.3);
+  background: #000;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+/* ---------- 窄屏适配 ---------- */
+@media (max-width: 760px) {
+  .select-grid { grid-template-columns: 1fr; }
+
+  .intro-card { flex-direction: column; align-items: center; text-align: center; max-width: 88vw; }
+  .intro-card-frame { width: min(84vw, 44vh); max-height: none; }
+  .intro-row { justify-content: center; }
+
+  .spirit-card { flex-direction: column; align-items: center; text-align: center; max-width: 92vw; }
+  .spirit-card-frame img { height: min(36vh, 320px); width: auto; max-width: 80vw; }
+  .spirit-card-info { max-width: none; }
+
+  .zoom-box { height: auto; max-height: 97vh; overflow-y: auto; }
+  .zoom-card { flex-direction: column; gap: 12px; text-align: center; }
+  .zoom-frame { flex: 0 0 auto; width: min(92vw, 60vh); height: auto; }
+  .zoom-frame img { width: 100%; height: auto; aspect-ratio: 3 / 2; }
+  .zoom-info { width: 94vw; align-items: center; }
+  .zoom-info-head, .zoom-info-body, .zoom-info-foot { display: block; }
+  .zoom-info-head::before { margin-left: auto; margin-right: auto; }
+  .zoom-info-body { padding: 12px 0; }
+  .zoom-desc { text-align: center; }
+  .zoom-lore { width: min(100%, 360px); }
+  .lore-item { justify-content: space-between; }
+  .zoom-seal { margin-left: auto; margin-right: auto; }
+  #card-zoom .intro-start-hint { text-align: center; }
+  #card-zoom .btn-row { justify-content: center; }
+}
+
+/* ---------- 矮屏适配（笔记本半屏 / 小窗口全屏） ---------- */
+@media (max-height: 700px) {
+  .layer { gap: 1.5vh; padding: 2vh 3vw; }
+
+  .attract-card { width: clamp(140px, 15vw, 200px); }
+
+  #success { padding-top: 1.5vh; }
+  .success-stage { gap: 1vh; }
+  .spirit-card { padding: 10px 18px; gap: 14px; }
+  .spirit-card-frame img { height: min(24vh, 220px); }
+  .spirit-quote { font-size: clamp(12px, 2vh, 16px); }
+  .success-panel { padding: 12px 26px; }
+  .success-title { font-size: clamp(18px, 3.4vh, 24px); }
+  .stone-glyph { width: clamp(30px, 5.6vh, 44px); height: clamp(30px, 5.6vh, 44px); font-size: clamp(15px, 2.6vh, 20px); }
+  .stone-row { margin-top: 8px; }
+  .next-line { margin-top: 8px; }
+  #success .btn-row { margin-top: 10px; }
+
+  .intro-card-frame { max-height: 30vh; width: clamp(200px, 24vw, 320px); }
+  .intro-card { padding: 10px 16px; gap: 12px; }
+
+  .zoom-info { width: clamp(220px, 24vw, 340px); }
+  .zoom-desc { font-size: clamp(12px, 2vh, 15px); }
+  .lore-item { padding: 5px 2px; }
+  .lore-k { font-size: clamp(10px, 1.7vh, 12px); }
+  .lore-v { font-size: clamp(11.5px, 1.9vh, 14px); }
+
+  .final-content { padding: 14px 26px; gap: 1vh; }
+  #final { padding-bottom: 2.5vh; }
+
+  #guide-pop { padding-top: 2vh; }
+}
+
+/* ==================== 幸运转盘（v1.10.0） ==================== */
+
+#lucky {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(8px, 1.6vh, 18px);
+  padding: 2vh 3vw;
+  background:
+    radial-gradient(ellipse 90% 70% at 50% 28%, rgba(44, 36, 76, 0.55), transparent 72%),
+    radial-gradient(ellipse at 50% 108%, rgba(24, 18, 46, 0.65), transparent 62%),
+    rgba(4, 7, 16, 0.94);
+}
+
+.lucky-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7vh;
+  text-align: center;
+}
+
+.lucky-title {
+  font-size: clamp(22px, 3.2vw, 38px);
+  letter-spacing: 0.34em;
+  text-indent: 0.34em;
+  color: var(--light-color);
+  text-shadow: 0 0 30px rgba(255, 170, 70, 0.45), 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.lucky-sub {
+  font-size: clamp(12px, 1.4vw, 16px);
+  letter-spacing: 0.2em;
+  color: rgba(243, 230, 200, 0.78);
+}
+
+/* 转盘舞台：1:1 场景整图铺底，旋转圆盘按原图坐标叠放对齐 */
+.lucky-stage {
+  position: relative;
+  width: min(58vh, 86vw, 600px);
+  aspect-ratio: 1 / 1;
+  border-radius: 24px;
+  border: 1px solid color-mix(in srgb, var(--gold) 55%, transparent);
+  box-shadow: 0 0 60px rgba(0, 0, 0, 0.55), 0 0 34px rgba(255, 200, 110, 0.14);
+  background: rgba(10, 16, 32, 0.6);
+  overflow: hidden;
+}
+
+.lucky-scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* 静止盘面：不切割素材——同一张整图按原图坐标偏移显示（1254 图中盘心(634,535) 半径436）；
+   画面保持不动不旋转，--lit 由 JS 逐帧驱动：0=四灵奖励灰暗待点亮 → 1=全彩点亮，
+   与灯光层旋转同步 */
+.lucky-wheel {
+  position: absolute;
+  left: 15.789%;
+  top: 7.895%;
+  width: 69.538%;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background: url('../assets/images/lucky.jpg') no-repeat;
+  background-size: 143.807% 143.807%;
+  background-position: 51.832% 25.916%;
+  filter: grayscale(calc(1 - var(--lit, 0))) brightness(calc(0.52 + 0.48 * var(--lit, 0)));
+  will-change: filter;
+  user-select: none;
+  -webkit-user-drag: none;
+  /* 金环兜底：对齐若有亚像素误差，金环恰好遮住接缝 */
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--gold) 42%, transparent),
+              0 0 26px rgba(255, 200, 110, 0.2);
+}
+
+/* ---------- 灯光层（v1.12.0）：盘面不动，一束锥形金光绕盘心旋转选奖 ----------
+   --lrot 由 JS 写入终值（≥4 整圈 + 奖品方位角），只在 .spinning 下交给 CSS 缓动追赶；
+   光柱中线在容器 0° 方向（12 点），rotate(--lrot) 后恰好指向奖品扇区正中；
+   停稳后转 .stay：光柱驻留在中奖方位呼吸发光，直到揭晓收下 */
+.lucky-light {
+  position: absolute;
+  left: 15.789%;
+  top: 7.895%;
+  width: 69.538%;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  z-index: 3;
+  pointer-events: none;
+  transform: rotate(var(--lrot, 0deg));
+  background: conic-gradient(from -26deg,
+    rgba(255, 214, 140, 0) 0deg,
+    rgba(255, 216, 148, 0.10) 8deg,
+    rgba(255, 230, 172, 0.30) 17deg,
+    rgba(255, 246, 210, 0.58) 26deg,
+    rgba(255, 230, 172, 0.30) 35deg,
+    rgba(255, 216, 148, 0.10) 44deg,
+    rgba(255, 214, 140, 0) 52deg,
+    rgba(255, 214, 140, 0) 360deg);
+  mix-blend-mode: screen;
+  opacity: 0;
+}
+
+/* 盘心柔光：光柱扫过时中心始终带一点暖晕 */
+.lucky-light::after {
+  content: '';
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 226, 160, 0.22), rgba(255, 226, 160, 0) 62%);
+}
+
+.lucky-light.spinning {
+  opacity: 1;
+  transition: transform 5.2s cubic-bezier(0.12, 0.62, 0.05, 1), opacity 0.5s ease;
+}
+
+/* 光柱驻留：停在奖品方位呼吸发光，光圈比光柱更凝聚，宣布最终落点 */
+.lucky-light.stay {
+  opacity: 1;
+  animation: luckyStay 1.6s ease-in-out infinite;
+}
+
+@keyframes luckyStay {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.5) saturate(1.25); }
+}
+
+/* 停稳点亮闪光：从过曝到正常，四个奖励全亮的仪式感 */
+.lucky-wheel.lit-flash { animation: luckyLitFlash 0.7s ease-out 1; }
+
+@keyframes luckyLitFlash {
+  0%   { filter: brightness(1.6) saturate(1.3); }
+  100% { filter: brightness(1) saturate(1); }
+}
+
+/* 中央星钮：金盘 + ★，直径 17% 盖住图中原星钮（旋转不露馅），照住即开转 */
+.lucky-go {
+  position: absolute;
+  left: 50.558%;
+  top: 42.663%;
+  transform: translate(-50%, -50%);
+  width: clamp(64px, 17%, 110px);
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 240, 200, 0.92);
+  background: radial-gradient(circle at 32% 26%, #fff3c4 0%, #ffd166 42%, #e09a34 78%, #b06f1e 100%);
+  box-shadow:
+    0 0 0 3px rgba(90, 40, 8, 0.55),
+    0 0 0 6px color-mix(in srgb, var(--gold) 60%, transparent),
+    0 6px 20px rgba(0, 0, 0, 0.5),
+    0 0 30px rgba(255, 200, 110, 0.42),
+    0 0 60px rgba(255, 190, 80, 0.3);
+  cursor: pointer;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.lucky-go::after {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--gold) 75%, transparent);
+  animation: lucky-halo 1.8s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes lucky-halo {
+  0%   { opacity: 0.9; transform: scale(0.9); }
+  70%  { opacity: 0; transform: scale(1.4); }
+  100% { opacity: 0; transform: scale(1.4); }
+}
+
+/* ★ 五角星标 */
+.lucky-go i {
+  width: 40%;
+  height: 40%;
+  background: linear-gradient(180deg, #fff6d8, #b06f1e);
+  clip-path: polygon(50% 0%, 63% 34%, 98% 35%, 70% 57%, 80% 91%, 50% 70%, 20% 91%, 30% 57%, 2% 35%, 37% 34%);
+  filter: drop-shadow(0 1px 2px rgba(90, 40, 8, 0.7));
+}
+
+/* 旋转中/揭晓后按钮退光退色，避免再次凝视 */
+.lucky-go.spun,
+.lucky-go.disabled {
+  filter: saturate(0.35) brightness(0.62);
+  pointer-events: none;
+  cursor: default;
+}
+
+.lucky-go.spun::after,
+.lucky-go.disabled::after {
+  animation: none;
+  opacity: 0;
+}
+
+/* 凝视放大时必须带回 translate 居中修正：.btn-gaze.gazing 的 scale 会直接覆盖
+   translate(-50%,-50%)，中心一丢按钮就往右下跳半个身位（v1.12.0 修复） */
+.lucky-go.gazing {
+  transform: translate(-50%, -50%) scale(1.03);
+}
+
+/* 按钮下方引导文案 */
+.lucky-hint {
+  position: absolute;
+  left: 50.558%;
+  top: 89%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: clamp(12px, 1.9vh, 16px);
+  letter-spacing: 0.14em;
+  color: #ffe9b8;
+  text-shadow: 0 0 14px rgba(255, 170, 70, 0.65), 0 1px 4px rgba(0, 0, 0, 0.8);
+  z-index: 4;
+  animation: lucky-blink 1.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.lucky-hint.dim { animation: none; opacity: 0.8; }
+.lucky-hint.gone { display: none; }
+
+@keyframes lucky-blink {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
+
+.lucky-foot {
+  font-size: clamp(11px, 1.3vw, 14px);
+  letter-spacing: 0.12em;
+  color: rgba(243, 230, 200, 0.62);
+  text-align: center;
+}
+
+.lucky-foot b { color: #ffd88a; }
+
+/* 中奖后脚注切换（v1.12.0 无弹窗）：默认提示语常驻，中奖时原地换中奖文案 + 「收下」按钮浮现 */
+.lucky-continue { display: none; margin-top: 12px; }
+#lucky.won .lucky-foot-note {
+  color: #ffe3a6;
+  font-size: clamp(13px, 1.55vw, 17px);
+  text-shadow: 0 0 16px rgba(255, 190, 90, 0.55), 0 1px 4px rgba(0, 0, 0, 0.85);
+  animation: luckyNoteIn 0.55s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+#lucky.won .lucky-continue {
+  display: inline-flex;
+  animation: luckyBtnIn 0.55s cubic-bezier(0.2, 1.4, 0.4, 1) 0.25s both;
+}
+@keyframes luckyNoteIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes luckyBtnIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.92); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ---------- 中奖庆祝特效（v1.12.0 无弹窗）：与灯光层同盒旋转，对准中奖方位原地绽放 ----------
+   原点光爆 + 双扩散环 + 12 枚星屑沿圆周迸散；--burst-rot 由 JS 写真实光柱终角（含抖动） */
+.lucky-burst {
+  position: absolute;
+  left: 15.789%;
+  top: 7.895%;
+  width: 69.538%;
+  aspect-ratio: 1 / 1;
+  transform: rotate(var(--burst-rot, 0deg));
+  transform-origin: 50% 50%;
+  z-index: 4;
+  pointer-events: none;
+}
+.lucky-burst > span { position: absolute; opacity: 0; }
+
+/* 原点光爆：盘心一团暖光涌起再散 */
+.lucky-burst-glow {
+  left: 50%;
+  top: 50%;
+  width: 34%;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 244, 200, 0.95) 0%, rgba(255, 200, 100, 0.55) 38%, transparent 70%);
+  transform: translate(-50%, -50%) scale(0.3);
+}
+.lucky-burst.active .lucky-burst-glow { animation: luckyGlowPop 1.5s ease-out forwards; }
+@keyframes luckyGlowPop {
+  0%   { opacity: 0;    transform: translate(-50%, -50%) scale(0.3); }
+  22%  { opacity: 0.95; transform: translate(-50%, -50%) scale(1.18); }
+  100% { opacity: 0;    transform: translate(-50%, -50%) scale(2.5); }
+}
+
+/* 双扩散环：金环从盘心荡开两层 */
+.lucky-burst-ring {
+  left: 50%;
+  top: 50%;
+  width: 30%;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 216, 138, 0.9);
+  transform: translate(-50%, -50%) scale(0.25);
+}
+.lucky-burst-ring.r2 { border-width: 2px; border-color: rgba(255, 240, 200, 0.65); }
+.lucky-burst.active .lucky-burst-ring  { animation: luckyRingOut 1.15s ease-out forwards; }
+.lucky-burst.active .lucky-burst-ring.r2 { animation: luckyRingOut 1.35s ease-out 0.18s forwards; }
+@keyframes luckyRingOut {
+  0%   { opacity: 0.9; transform: translate(-50%, -50%) scale(0.25); }
+  100% { opacity: 0;   transform: translate(-50%, -50%) scale(1.55); }
+}
+
+/* 12 枚星屑：均匀部署在光柱圆周（中奖方位随容器旋转），active 时沿半径向外迸散 */
+.lucky-spark {
+  width: clamp(5px, 0.9%, 9px);
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff6d8 0%, #ffd166 60%, transparent 100%);
+  box-shadow: 0 0 10px 2px rgba(255, 205, 110, 0.85);
+  transform: translate(-50%, -50%);
+}
+.lucky-burst.active .lucky-spark { animation: luckySparkFly 0.95s ease-out forwards; }
+.lucky-spark:nth-child(4)  { left: 50%;   top: 4%;    --fx: 0;     --fy: -28px; animation-delay: 0s; }
+.lucky-spark:nth-child(5)  { left: 73%;   top: 10.5%; --fx: 26px;  --fy: -18px; animation-delay: 0.02s; }
+.lucky-spark:nth-child(6)  { left: 89.8%; top: 27%;   --fx: 26px;  --fy: 10px;  animation-delay: 0.04s; }
+.lucky-spark:nth-child(7)  { left: 96%;   top: 50%;   --fx: 30px;  --fy: 0;     animation-delay: 0.06s; }
+.lucky-spark:nth-child(8)  { left: 89.8%; top: 73%;   --fx: 26px;  --fy: 16px;  animation-delay: 0.05s; }
+.lucky-spark:nth-child(9)  { left: 73%;   top: 89.5%; --fx: 18px;  --fy: 24px;  animation-delay: 0.03s; }
+.lucky-spark:nth-child(10) { left: 50%;   top: 96%;   --fx: 0;     --fy: 28px;  animation-delay: 0s; }
+.lucky-spark:nth-child(11) { left: 27%;   top: 89.5%; --fx: -18px; --fy: 24px;  animation-delay: 0.03s; }
+.lucky-spark:nth-child(12) { left: 10.2%; top: 73%;   --fx: -26px; --fy: 16px;  animation-delay: 0.05s; }
+.lucky-spark:nth-child(13) { left: 4%;    top: 50%;   --fx: -30px; --fy: 0;     animation-delay: 0.06s; }
+.lucky-spark:nth-child(14) { left: 10.2%; top: 27%;   --fx: -26px; --fy: -14px; animation-delay: 0.04s; }
+.lucky-spark:nth-child(15) { left: 27%;   top: 10.5%; --fx: -18px; --fy: -24px; animation-delay: 0.02s; }
+@keyframes luckySparkFly {
+  0%   { opacity: 0; transform: translate(-50%, -50%) translate(0, 0) scale(1); }
+  12%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) translate(var(--fx, 0), var(--fy, 0)) scale(0.15); }
+}
+
+/* ---------- 终幕面板 · 抽奖入口（只抽一次：抽完由 JS 隐藏；重置数据后重新通关可再抽） ---------- */
+.btn-final-lucky {
+  color: #4a2a08;
+  background: linear-gradient(180deg, #ffe9a8, #ffc24d 55%, #e09a34);
+  border-color: rgba(255, 240, 200, 0.95);
+  animation: finalLuckyPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes finalLuckyPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 214, 102, 0.75), 0 6px 20px rgba(0, 0, 0, 0.4); transform: scale(1); }
+  50%      { box-shadow: 0 0 0 13px rgba(255, 214, 102, 0), 0 6px 26px rgba(0, 0, 0, 0.5); transform: scale(1.045); }
+}
+
+/* ---------- 成功结算 · 四印合璧按钮常亮闪烁（第四关通关指引） ---------- */
+.btn-next.flash-quest { animation: questFlash 1.4s ease-in-out infinite; }
+
+@keyframes questFlash {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 214, 102, 0.8), 0 0 24px rgba(255, 200, 110, 0.4); transform: scale(1); }
+  50%      { box-shadow: 0 0 0 14px rgba(255, 214, 102, 0), 0 0 34px rgba(255, 200, 110, 0.6); transform: scale(1.05); }
+}
+
+/* ---------- 幸运转盘 · 小屏适配 ---------- */
+@media (max-width: 760px) {
+  .lucky-stage { width: min(52vh, 92vw); }
+}
+
+@media (max-height: 700px) {
+  .lucky-stage { width: min(46vh, 86vw, 480px); }
+  .lucky-head { gap: 0.5vh; }
+  #lucky { gap: 1vh; }
+}
