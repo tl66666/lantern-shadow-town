@@ -113,10 +113,10 @@ window.MYC = window.MYC || {};
     this.input.switchTo(target).then(function (res) {
       if (res.ok) {
         self.ui.toast(target === 'HAND'
-          ? '已切换为摄像头手势（食指指向 = 灯的位置）'
-          : '已切换为鼠标控制', 3200);
+          ? '已切换为摄像头手势（食指指向 = 灯的位置）· 按 I 切回鼠标'
+          : '已切换为鼠标控制 · 按 I 切回手势', 3200);
       } else {
-        self.ui.toast('切换失败：' + (res.message || '未知原因'), 5200);
+        self.ui.toast('切换失败：' + (res.message || '未知原因') + '，当前方式可继续游玩', 5200);
       }
       self._syncInputToggle();
     });
@@ -124,7 +124,7 @@ window.MYC = window.MYC || {};
 
   Game.prototype._syncInputToggle = function () {
     var hand = this.input.getActiveMode() === 'HAND';
-    this.ui.setInputToggle(hand ? '🖐 手势' : '🖱 鼠标', hand ? 'hand' : 'mouse');
+    this.ui.setInputToggle(hand ? '🖐 手势 · I' : '🖱 鼠标 · I', hand ? 'hand' : 'mouse');
   };
 
   /* ============================================================
